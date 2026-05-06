@@ -1,0 +1,346 @@
+<!DOCTYPE html>											
+<html lang="th">											
+<head>											
+<meta charset="UTF-8">											
+<meta name="viewport" content="width=device-width, initial-scale=1">											
+<title>Smart Loyalty System</title>											
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>											
+<style>											
+body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; margin: 0; padding: 15px; color: #333; }											
+.hidden { display: none !important; }											
+.system-header { text-align: center; padding: 10px 0; font-weight: bold; color: #333; font-size: 14px; border-bottom: 1px solid #ddd; margin-bottom: 15px; }											
+.card { background: white; border-radius: 15px; padding: 20px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); margin-bottom: 20px; }											
+.profile-header { display: flex; align-items: center; gap: 15px; margin-bottom: 15px; }											
+.profile-pic { width: 80px; height: 80px; border-radius: 50%; object-fit: cover; border: 3px solid #00B900; }											
+.profile-info h2 { margin: 0; font-size: 20px; color: #1a1a1a; }											
+.tier-badge { background: #ffd700; color: #855c0b; padding: 4px 12px; border-radius: 20px; font-size: 14px; font-weight: bold; display: inline-block; margin-top: 5px; }											
+.contact-info { font-size: 14px; color: #666; line-height: 1.6; background: #f8f9fa; padding: 15px; border-radius: 10px; }											
+h3.section-title { color: #00B900; margin-bottom: 15px; border-left: 4px solid #00B900; padding-left: 10px; }											
+.promo-grid { display: grid; grid-template-columns: 1fr; gap: 15px; }											
+.promo-card { background: white; border-radius: 12px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1); border: 1px solid #eee; }											
+.promo-img { width: 100%; height: 160px; object-fit: cover; }											
+.promo-details { padding: 15px; }											
+.promo-title { font-weight: bold; font-size: 16px; margin: 0 0 10px 0; }											
+.promo-period { font-size: 12px; color: #888; margin-bottom: 10px; }											
+.points-bar-bg { background: #e0e0e0; height: 10px; border-radius: 5px; overflow: hidden; margin-bottom: 5px; }											
+.points-bar-fill { background: linear-gradient(90deg, #00B900, #32cd32); height: 100%; transition: width 0.5s; }											
+.points-status { display: flex; justify-content: space-between; font-size: 14px; font-weight: bold; }											
+.status-missing { color: #e74c3c; }											
+.status-ready { color: #00B900; }											
+input, select, button { width: 100%; padding: 12px; margin: 8px 0; border: 1px solid #ddd; border-radius: 8px; box-sizing: border-box; font-size: 16px; font-family: inherit; }											
+select { background-color: white; cursor: pointer; }											
+button { background: #00B900; color: white; border: none; font-weight: bold; cursor: pointer; }											
+#loading { text-align: center; padding: 50px 20px; font-size: 18px; color: #666; }											
+.two-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }											
+</style>											
+</head>											
+<body>											
+											
+<div class="system-header">Smart Loyalty System</div>											
+											
+<div id="loading"><h2>กำลังโหลดข้อมูลสมาชิก... ⏳</h2></div>											
+											
+<div id="dashboard" class="hidden">											
+<div class="card">											
+<div class="profile-header">											
+<img id="userPic" class="profile-pic" src="https://via.placeholder.com/80" alt="Profile">											
+<div class="profile-info">											
+<h2 id="userName">-</h2>											
+<div id="userTier" class="tier-badge">Member</div>											
+</div>											
+</div>											
+<div class="contact-info">											
+<b>รหัสสมาชิก:</b> <span id="userMemId">-</span><br>											
+<b>📞 โทร:</b> <span id="userPhone">-</span><br>											
+<b>✉️ อีเมล:</b> <span id="userEmail">-</span>											
+</div>											
+</div>											
+<h3 class="section-title">🎁 โปรโมชั่นของคุณ</h3>											
+<div id="promoContainer" class="promo-grid"></div>											
+</div>											
+											
+<div id="registerView" class="card hidden">											
+<h2 style="color:#00B900; text-align:center;">สมัครสมาชิกใหม่</h2>											
+<form id="regForm">											
+<label>ชื่อ-นามสกุล:</label><input type="text" id="inpName" required>											
+<label>เบอร์โทรศัพท์:</label><input type="tel" id="inpPhone" required>											
+<label>อีเมล:</label><input type="email" id="inpEmail">											
+<label>วัน/เดือน/ปีเกิด:</label><input type="date" id="inpDob" required>											
+<label>ประเทศ:</label>											
+<input type="text" id="inpCountry" required value="ประเทศไทย" placeholder="เช่น ประเทศไทย">											
+<label>ที่อยู่ (บ้านเลขที่, ถนน, ตำบล, อำเภอ):</label>											
+<input type="text" id="inpAddress" required placeholder="เช่น 123/45 ซ.สุขุมวิท 1 ...">											
+<div class="two-cols">											
+<div>											
+<label>จังหวัด:</label>											
+<select id="inpProvince" required>											
+<option value="" disabled selected>-- เลือกจังหวัด --</option>											
+<option value="กรุงเทพมหานคร">กรุงเทพมหานคร</option>											
+<option value="กระบี่">กระบี่</option>											
+<option value="กาญจนบุรี">กาญจนบุรี</option>											
+<option value="กาฬสินธุ์">กาฬสินธุ์</option>											
+<option value="กำแพงเพชร">กำแพงเพชร</option>											
+<option value="ขอนแก่น">ขอนแก่น</option>											
+<option value="จันทบุรี">จันทบุรี</option>											
+<option value="ฉะเชิงเทรา">ฉะเชิงเทรา</option>											
+<option value="ชลบุรี">ชลบุรี</option>											
+<option value="ชัยนาท">ชัยนาท</option>											
+<option value="ชัยภูมิ">ชัยภูมิ</option>											
+<option value="ชุมพร">ชุมพร</option>											
+<option value="เชียงราย">เชียงราย</option>											
+<option value="เชียงใหม่">เชียงใหม่</option>											
+<option value="ตรัง">ตรัง</option>											
+<option value="ตราด">ตราด</option>											
+<option value="ตาก">ตาก</option>											
+<option value="นครนายก">นครนายก</option>											
+<option value="นครปฐม">นครปฐม</option>											
+<option value="นครพนม">นครพนม</option>											
+<option value="นครราชสีมา">นครราชสีมา</option>											
+<option value="นครศรีธรรมราช">นครศรีธรรมราช</option>											
+<option value="นครสวรรค์">นครสวรรค์</option>											
+<option value="นนทบุรี">นนทบุรี</option>											
+<option value="นราธิวาส">นราธิวาส</option>											
+<option value="น่าน">น่าน</option>											
+<option value="บึงกาฬ">บึงกาฬ</option>											
+<option value="บุรีรัมย์">บุรีรัมย์</option>											
+<option value="ปทุมธานี">ปทุมธานี</option>											
+<option value="ประจวบคีรีขันธ์">ประจวบคีรีขันธ์</option>											
+<option value="ปราจีนบุรี">ปราจีนบุรี</option>											
+<option value="ปัตตานี">ปัตตานี</option>											
+<option value="พระนครศรีอยุธยา">พระนครศรีอยุธยา</option>											
+<option value="พะเยา">พะเยา</option>											
+<option value="พังงา">พังงา</option>											
+<option value="พัทลุง">พัทลุง</option>											
+<option value="พิจิตร">พิจิตร</option>											
+<option value="พิษณุโลก">พิษณุโลก</option>											
+<option value="เพชรบุรี">เพชรบุรี</option>											
+<option value="เพชรบูรณ์">เพชรบูรณ์</option>											
+<option value="แพร่">แพร่</option>											
+<option value="ภูเก็ต">ภูเก็ต</option>											
+<option value="มหาสารคาม">มหาสารคาม</option>											
+<option value="มุกดาหาร">มุกดาหาร</option>											
+<option value="แม่ฮ่องสอน">แม่ฮ่องสอน</option>											
+<option value="ยโสธร">ยโสธร</option>											
+<option value="ยะลา">ยะลา</option>											
+<option value="ร้อยเอ็ด">ร้อยเอ็ด</option>											
+<option value="ระนอง">ระนอง</option>											
+<option value="ระยอง">ระยอง</option>											
+<option value="ราชบุรี">ราชบุรี</option>											
+<option value="ลพบุรี">ลพบุรี</option>											
+<option value="ลำปาง">ลำปาง</option>											
+<option value="ลำพูน">ลำพูน</option>											
+<option value="เลย">เลย</option>											
+<option value="ศรีสะเกษ">ศรีสะเกษ</option>											
+<option value="สกลนคร">สกลนคร</option>											
+<option value="สงขลา">สงขลา</option>											
+<option value="สตูล">สตูล</option>											
+<option value="สมุทรปราการ">สมุทรปราการ</option>											
+<option value="สมุทรสงคราม">สมุทรสงคราม</option>											
+<option value="สมุทรสาคร">สมุทรสาคร</option>											
+<option value="สระแก้ว">สระแก้ว</option>											
+<option value="สระบุรี">สระบุรี</option>											
+<option value="สิงห์บุรี">สิงห์บุรี</option>											
+<option value="สุโขทัย">สุโขทัย</option>											
+<option value="สุพรรณบุรี">สุพรรณบุรี</option>											
+<option value="สุราษฎร์ธานี">สุราษฎร์ธานี</option>											
+<option value="สุรินทร์">สุรินทร์</option>											
+<option value="หนองคาย">หนองคาย</option>											
+<option value="หนองบัวลำภู">หนองบัวลำภู</option>											
+<option value="อ่างทอง">อ่างทอง</option>											
+<option value="อำนาจเจริญ">อำนาจเจริญ</option>											
+<option value="อุดรธานี">อุดรธานี</option>											
+<option value="อุตรดิตถ์">อุตรดิตถ์</option>											
+<option value="อุทัยธานี">อุทัยธานี</option>											
+<option value="อุบลราชธานี">อุบลราชธานี</option>											
+</select>											
+</div>											
+<div>											
+<label>รหัสไปรษณีย์:</label>											
+<input type="tel" id="inpZip" required placeholder="เช่น 10110" maxlength="5">											
+</div>											
+</div>											
+<button type="button" onclick="submitForm()">ลงทะเบียน</button>											
+</form>											
+</div>											
+											
+<div id="successView" class="card hidden" style="text-align: center;">											
+<div style="font-size: 60px;">🎉</div>											
+<h2 style="color: #00B900;">แลกรับรางวัลสำเร็จ!</h2>											
+<p>กรุณาแสดงหน้าจอนี้ต่อพนักงานเพื่อรับสิทธิ์</p>											
+<div style="background: #f8f9fa; padding: 20px; border: 2px dashed #00B900; border-radius: 10px; margin: 20px 0;">											
+<span style="font-size: 14px; color: #666;">รหัสรับสิทธิ์ของคุณคือ:</span><br>											
+<b id="couponCode" style="font-size: 32px; color: #1a1a1a; letter-spacing: 2px;">-------</b>											
+</div>											
+<p id="redeemPromoName" style="font-weight: bold;"></p>											
+<button onclick="location.reload()" style="background: #666;">กลับหน้าหลัก</button>											
+</div>											
+											
+<script>											
+const LIFF_ID = "2009968995-Egq6SGGS";											
+const GAS_URL = "https://script.google.com/macros/s/AKfycbzHPiLHLxEpmOfnAepJDC4sm4xaDWXrwU3O_R84l-OeJlMiaQrzg3dKYK9Y925TP63trA/exec";											
+											
+let userLineUid = "";											
+const monthNames = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];											
+											
+async function main() {											
+await liff.init({ liffId: LIFF_ID });											
+if (!liff.isLoggedIn()) { liff.login(); }											
+else {											
+const profile = await liff.getProfile();											
+userLineUid = profile.userId;											
+											
+fetch(GAS_URL + "?action=check&uid=" + userLineUid)											
+.then(res => res.json())											
+.then(result => {											
+document.getElementById('loading').classList.add('hidden');											
+if (result.isMember) {											
+renderDashboard(profile.pictureUrl, profile.displayName, result.member, result.promos);											
+} else {											
+document.getElementById('inpName').value = profile.displayName;											
+document.getElementById('registerView').classList.remove('hidden');											
+}											
+});											
+}											
+}											
+											
+function renderDashboard(linePic, lineName, memberData, promos) {											
+document.getElementById('dashboard').classList.remove('hidden');											
+document.getElementById('userPic').src = linePic || "https://via.placeholder.com/80";											
+document.getElementById('userName').innerText = lineName;											
+document.getElementById('userTier').innerText = memberData.tier || "Member";											
+document.getElementById('userMemId').innerText = memberData.memberId;											
+document.getElementById('userPhone').innerText = memberData.phone || "-";											
+document.getElementById('userEmail').innerText = memberData.email || "-";											
+											
+const promoDiv = document.getElementById('promoContainer');											
+promoDiv.innerHTML = "";											
+											
+promos.forEach(promo => {											
+let myPoints = 0;											
+for(let i = promo.startM - 1; i <= promo.endM - 1; i++) {											
+myPoints += memberData.points[i] || 0;											
+}											
+											
+let percent = (myPoints / promo.reqPoints) * 100;											
+if(percent > 100) percent = 100;											
+											
+let missing = promo.reqPoints - myPoints;											
+											
+let statusHtml = "";											
+if (missing <= 0) {											
+statusHtml = `											
+<span class="status-ready">🎉 พร้อมแลกสิทธิ์! (${myPoints}/${promo.reqPoints})</span>											
+<button onclick="redeem('${promo.id}', '${promo.name}')" style="margin-top:10px; background:#e74c3c; border-radius:20px; padding:8px;">🎁 กดรับสิทธิ์เลย</button>											
+`;											
+} else {											
+statusHtml = `											
+<div style="display:flex; justify-content:space-between; width:100%;">											
+<span>สะสมแล้ว ${myPoints}</span><span class="status-missing">ขาดอีก ${missing} แต้ม</span>											
+</div>											
+`;											
+}											
+											
+let periodText = monthNames[promo.startM - 1] + " - " + monthNames[promo.endM - 1] + (promo.year ? " " + promo.year : "");											
+											
+const cardHtml = `											
+<div class="promo-card">											
+${promo.image ? `<img class="promo-img" src="${promo.image}">` : ''}											
+<div class="promo-details">											
+<h3 class="promo-title">${promo.name}</h3>											
+<div class="promo-period">🗓 สะสมช่วง: ${periodText}</div>											
+<div class="points-bar-bg"><div class="points-bar-fill" style="width: ${percent}%;"></div></div>											
+<div class="points-status" style="flex-direction:column; align-items:flex-start;">											
+${statusHtml}											
+</div>											
+</div>											
+</div>`;											
+promoDiv.innerHTML += cardHtml;											
+});											
+											
+if(promos.length === 0) promoDiv.innerHTML = "<p style='text-align:center; color:#888;'>ยังไม่มีโปรโมชั่นในขณะนี้</p>";											
+}											
+											
+function redeem(promoId, promoName) {											
+if(confirm(`ยืนยันการใช้แต้มเพื่อแลกรับ:\n"${promoName}"\n\n(แต้มจะถูกหักทันทีและไม่สามารถคืนได้)`)) {											
+											
+document.getElementById('dashboard').classList.add('hidden');											
+document.getElementById('loading').classList.remove('hidden');											
+document.getElementById('loading').innerHTML = "<h2>กำลังดำเนินการแลกรางวัล... ⏳</h2>";											
+											
+fetch(GAS_URL + "?action=redeem&uid=" + userLineUid + "&promoId=" + promoId)											
+.then(res => res.json())											
+.then(async result => {											
+if(result.success) {											
+											
+const randomCode = result.couponCode; // ดึงคูปองจาก GAS มาโชว์											
+											
+try {											
+if (liff.isInClient()) {											
+await liff.sendMessages([{											
+type: "text",											
+text: "🎁 [แจ้งแลกรับสิทธิ์]\nรหัสสมาชิก: " + result.updatedData.member.memberId +											
+\nขอแลก:  + promoName +											
+\nรหัสคูปอง:  + randomCode +											
+\n\n(แต้มถูกหักในระบบเรียบร้อยแล้ว)											
+}]);											
+}											
+} catch (msgError) {											
+console.log("ส่งข้อความไม่ได้: ", msgError);											
+}											
+											
+document.getElementById('loading').classList.add('hidden');											
+document.getElementById('successView').classList.remove('hidden');											
+document.getElementById('couponCode').innerText = randomCode;											
+document.getElementById('redeemPromoName').innerText = promoName;											
+											
+} else {											
+alert("ขออภัย: " + result.message);											
+location.reload();											
+}											
+})											
+.catch(err => {											
+console.error(err);											
+alert("เกิดข้อผิดพลาด กรุณาลองใหม่อีกครั้ง");											
+location.reload();											
+});											
+}											
+}											
+											
+function submitForm() {											
+const provinceSelect = document.getElementById('inpProvince');											
+if(provinceSelect.value === "") {											
+alert("กรุณาเลือกจังหวัด");											
+provinceSelect.focus();											
+return;											
+}											
+											
+document.getElementById('registerView').classList.add('hidden');											
+document.getElementById('loading').classList.remove('hidden');											
+											
+const url = GAS_URL + "?action=register&uid=" + userLineUid +											
+&name= + encodeURIComponent(document.getElementById('inpName').value) +											
+&phone= + encodeURIComponent(document.getElementById('inpPhone').value) +											
+&email= + encodeURIComponent(document.getElementById('inpEmail').value) +											
+&dob= + encodeURIComponent(document.getElementById('inpDob').value) +											
+&country= + encodeURIComponent(document.getElementById('inpCountry').value) +											
+&address= + encodeURIComponent(document.getElementById('inpAddress').value) +											
+&province= + encodeURIComponent(document.getElementById('inpProvince').value) +											
+&zipcode= + encodeURIComponent(document.getElementById('inpZip').value);											
+											
+fetch(url)											
+.then(res => res.json())											
+.then(result => {											
+document.getElementById('loading').classList.add('hidden');											
+liff.getProfile().then(profile => {											
+renderDashboard(profile.pictureUrl, profile.displayName, result.member, result.promos);											
+});											
+});											
+}											
+											
+main();											
+</script>											
+</body>											
+</html>											
+											
+											
+											
